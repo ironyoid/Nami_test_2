@@ -3,12 +3,10 @@
 #include "wifi.h"
 #include "udp.h"
 #include "tcp.h"
-/* FreeRTOS event group to signal when we are connected*/
 static const char *TAG = "NAMI_TEST_MAIN";
 
-
+/* It's necessary for Wi-Fi */
 void nvs_init() {
-    //Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -19,10 +17,9 @@ void nvs_init() {
 
 void app_main() {
     csi_queue = xQueueCreate(CSI_QUEUE_LEN, sizeof(wifi_csi_info_t));
-    csi_semaphore = xSemaphoreCreateMutex();
     nvs_init();
     sta_ap_init();
     csi_init();
-    xTaskCreate(&udp_task, "udp_task", 2048, NULL, 0, &xTask_udp_handle);
-    xTaskCreate(&tcp_server_task, "tcp_server", 4096, NULL, 10, &tcp_server_handle);
+    xTaskCreate(&udp_task, "udp_task", 2048, NULL, 0, &xTask_udp_handle);      /* Priority is lower then Wi-Fi driver task (yep, recomendation from manual) */
+    xTaskCreate(&tcp_task, "tcp_server", 4096, NULL, 10, &tcp_server_handle);  
 }

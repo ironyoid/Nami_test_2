@@ -3,15 +3,19 @@
 #include "csi.h"
 static const char *TAG = "NAMI_TEST_UDP";
 #define DEBUG
+/**
+ * @brief   UDP task 
+ * @param   pvParameters
+ * @return  void
+ * @note    
+ */
 void udp_task(void *arg)
 {
     portBASE_TYPE xStatus;
     int addr_family = 0;
     int ip_protocol = 0;
     struct sockaddr_in dest_addr;
-    dest_addr.sin_addr.s_addr = inet_addr(HOST_IP);
     dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = htons(HOST_PORT);
     addr_family = AF_INET;
     ip_protocol = IPPROTO_IP;
     while (1)
@@ -63,9 +67,10 @@ void udp_task(void *arg)
                     else
                     {
 #ifdef DEBUG
-                        ESP_LOGI(TAG, "Socket created, sending to %s:%d", HOST_IP, HOST_PORT);
+                        ESP_LOGI(TAG, "Socket created, sending to %s:%d", udp_ip, udp_port);
 #endif
-                        int err = sendto(sock, &data.rx_ctrl, sizeof(data.rx_ctrl) + sizeof(data.mac), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                        /* Started from data.rx_ctrl and go to mac */
+                        int err = sendto(sock, &data.rx_ctrl, sizeof(data.rx_ctrl) + sizeof(data.mac), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)); 
                         if (err < 0)
                         {
 #ifdef DEBUG

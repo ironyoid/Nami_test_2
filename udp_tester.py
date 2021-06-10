@@ -22,7 +22,7 @@ class MyUDPHandler(DatagramRequestHandler):
         socket.sendto(b'Hello from server!', self.client_address)
 
 if __name__ == "__main__":
-    
+
     #Создаем экземпляр класса
     server = UDPServer(addr, MyUDPHandler)
     

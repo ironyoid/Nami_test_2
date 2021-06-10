@@ -12,7 +12,6 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
-
 #include "lwip/api.h"
 #include "lwip/netdb.h"
 #include "lwip/netbuf.h"
@@ -20,12 +19,11 @@
 #include "lwip/sys.h"
 #include "lwip/sockets.h"
 #include <lwip/netdb.h>
-#define HOST_IP                    "192.168.88.232" 
-#define HOST_PORT                   6350
+
 #define LEN_MAC_ADDR                20
-#define ESP_WIFI_SSID               "Keenetic-5919"
-#define ESP_WIFI_PASS               "2kcdbL5b"
+#define ESP_WIFI_SSID               "Keenetic-5919"     /*Add your AP SSID here */
+#define ESP_WIFI_PASS               "2kcdbL5b"          /*Add your AP password here */
 #define EXAMPLE_MAX_STA_CONN        16
 #define CSI_QUEUE_LEN               10
-#define MAC_LIST_LEN                16
+#define MAC_LIST_LEN                16                  /*Maximal number of transmitters */
 #endif

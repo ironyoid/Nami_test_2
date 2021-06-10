@@ -1,7 +1,7 @@
 #include "csi.h"
 //#define DEBUG
 static const char *TAG = "NAMI_TEST_CSI";
-
+/*Simple callback function for hook up CSI data and send them to queue*/
 void _wifi_csi_cb(void *ctx, wifi_csi_info_t *data)
 {
     wifi_csi_info_t d = data[0];
@@ -19,9 +19,9 @@ void _wifi_csi_cb(void *ctx, wifi_csi_info_t *data)
         ESP_LOGI(TAG, "Could not add data to the queue...");
 #endif
     }
-   // vTaskDelay(0);
 }
 
+/*Defaul initialisation of CSI*/
 void csi_init() {
 
     ESP_ERROR_CHECK(esp_wifi_set_csi(1));

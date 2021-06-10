@@ -3,6 +3,7 @@
 #define DEBUG
 static const char *TAG = "NAMI_TEST_TCP";
 
+/* CRC16 is CRC-16/CCITT-FALSE with 0x1021 poly */
 uint16_t CRC16(uint8_t *DATA, uint16_t length)
 {
     uint16_t crc = 0xFFFF;
@@ -15,7 +16,7 @@ uint16_t CRC16(uint8_t *DATA, uint16_t length)
     }
     return crc;
 }
-
+/* lwip send wraper */
 static void tcp_write(int s, const void *dataptr, int size, int flags)
 {
     int to_write = size;
@@ -35,13 +36,13 @@ void err_response(err_response_t response, int s, int flags)
     switch (response)
     {
     case OKEY:
-        tcp_write(s, "\x02\x54\x41\x00\x00\x00\x01\x4C", 8, flags);
+        tcp_write(s, "\x02\x54\x41\x00\x00\x00\x01\x4C", 8, flags);    
         break;
     case ERR:
         tcp_write(s, "\x02\x54\x41\xFF\x00\x00\xCE\x2F", 8, flags);
         break;
     case ECRC:
-        tcp_write(s, "\x02\x54\x41\xFE\x00\x00\xF9\x1F", 8, flags);
+        tcp_write(s, "\x02\x54\x41\xFE\x00\x00\xF9\x1F", 8, flags);     /* CRC error */
         break;
     case TIMEOUT:
         tcp_write(s, "\x02\x54\x41\xFD\x00\x00\xA0\x4F", 8, flags);
@@ -54,6 +55,12 @@ void err_response(err_response_t response, int s, int flags)
         break;
     }
 }
+/**
+ * @brief   Check if MAC exist in the list
+ * @param   buf - pointer on first element of MAC
+ * @return  existed item or -1 if error
+ * @note    
+ */
 int8_t check_mac_list(uint8_t *buf)
 {
     uint8_t mac_flag = 0;
@@ -71,7 +78,12 @@ int8_t check_mac_list(uint8_t *buf)
     }
     return -1;
 }
-
+/**
+ * @brief   Check if MAC exist in the list
+ * @param   buf - pointer on first element of MAC
+ * @return  0 - OK, 1 - error
+ * @note    
+ */
 uint8_t add_mac_to_list(uint8_t *buf)
 {
     if(list_of_mac.length < MAC_LIST_LEN)
@@ -88,6 +100,12 @@ uint8_t add_mac_to_list(uint8_t *buf)
         return 1;
     }
 }
+/**
+ * @brief   Check if MAC exist in the list
+ * @param   num - item which we wanna delete
+ * @return  0 - OK, 0 - error
+ * @note    
+ */
 uint8_t delete_mac_from_list(int8_t num)
 {
     if (list_of_mac.length != 0)
@@ -115,6 +133,16 @@ uint8_t delete_mac_from_list(int8_t num)
        return 1; 
     }
 }
+/**
+ * @brief   Simple TCP protocol parser
+ * @param   sock - socket number
+ * @param   flags - flags (0 in most cases)
+ * @param   buf - buffer with data
+ * @param   count - first element
+ * @param   size - buf size
+ * @return  void
+ * @note    
+ */
 void controller_read(int sock, int flags, uint8_t *buf, uint16_t count, uint16_t size)
 {
     uint8_t EE_error_flag = 1;
@@ -202,8 +230,13 @@ void controller_read(int sock, int flags, uint8_t *buf, uint16_t count, uint16_t
         err_response(ERR, sock, flags);
     }
 }
-
-void tcp_server_task(void *pvParameters)
+/**
+ * @brief   TCP task 
+ * @param   pvParameters
+ * @return  void
+ * @note    
+ */
+void tcp_task(void *pvParameters)
 {
     char addr_str[128];
     uint16_t CRC;
@@ -302,7 +335,7 @@ void tcp_server_task(void *pvParameters)
                     instruction.CRC |= ((uint16_t)rx_buffer[count + instruction.length + 1]) & 0x00FF;
                     CRC = CRC16(rx_buffer, len - 2);
                     ESP_LOGI(TAG, "CRC16 %d", CRC);
-                    //CRC = 0x0000;
+                    CRC = 0x0000;                     /* Hint to avoid stupid CRC calculation */
                     if (instruction.CRC == CRC)
                     {
                         controller_read(sock, 0, rx_buffer, count, instruction.length);
@@ -317,7 +350,9 @@ void tcp_server_task(void *pvParameters)
                 }
                 else
                 {
+#ifdef DEBUG
                     ESP_LOGE(TAG, "Command not recognized 02TQ");
+#endif
                     err_response(UNKNOW, sock, 0);
                 }
             }
