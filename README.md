@@ -73,4 +73,5 @@ Just downolad project and build with
 idf.py build
 ```
 ## Note
-It's only up to 16 transmitters posible in this version
+- It's only up to 16 transmitters posible in this version
+- CRC16 is CRC-16/CCITT-FALSE with 0x1021 poly
