@@ -15,11 +15,13 @@
 
 #include "lwip/err.h"
 #include "lwip/sys.h"
-
-
-#define LEN_MAC_ADDR 20
-#define ESP_WIFI_SSID      "NAMI_test_2"
-#define ESP_WIFI_PASS      "1234567890"
-#define EXAMPLE_MAX_STA_CONN       16
-
+#include "lwip/sockets.h"
+#include <lwip/netdb.h>
+#define HOST_IP                    "192.168.88.232" 
+#define HOST_PORT                   6350
+#define LEN_MAC_ADDR                20
+#define ESP_WIFI_SSID               "Keenetic-5919"
+#define ESP_WIFI_PASS               "2kcdbL5b"
+#define EXAMPLE_MAX_STA_CONN        16
+#define CSI_QUEUE_LEN               10
 #endif
