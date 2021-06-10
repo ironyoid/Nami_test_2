@@ -43,7 +43,6 @@ void udp_task(void *arg)
             ESP_LOGE(TAG, "%d,", data.rx_ctrl.rx_state);
 #endif
 
-
             struct sockaddr_in dest_addr;
             dest_addr.sin_addr.s_addr = inet_addr(HOST_IP);
             dest_addr.sin_family = AF_INET;
@@ -54,30 +53,38 @@ void udp_task(void *arg)
             int sock = socket(addr_family, SOCK_DGRAM, ip_protocol);
             if (sock < 0)
             {
+#ifdef DEBUG
                 ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
+#endif
             }
             else
             {
+#ifdef DEBUG
                 ESP_LOGI(TAG, "Socket created, sending to %s:%d", HOST_IP, HOST_PORT);
+#endif
                 int err = sendto(sock, &data.mac, sizeof(data.mac) + sizeof(data.rx_ctrl), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
                 //int err = sendto(sock, payload, strlen(payload), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
                 if (err < 0)
                 {
+#ifdef DEBUG
                     ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+#endif
                 }
                 else
                 {
+#ifdef DEBUG
                     ESP_LOGI(TAG, "Message sent");
-
+#endif
                     if (sock != -1)
                     {
+#ifdef DEBUG
                         ESP_LOGE(TAG, "Shutting down socket and restarting...");
+#endif
                         shutdown(sock, 0);
                         close(sock);
                     }
                 }
             }
-
         }
         else
         {
@@ -85,8 +92,9 @@ void udp_task(void *arg)
             ESP_LOGE(TAG, "Could not recive data from the queue...");
 #endif
         }
-     
+#ifdef DEBUG
         printf("\n");
+#endif
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }

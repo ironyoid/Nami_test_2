@@ -1,5 +1,5 @@
-#ifndef WIFI_H
-#define WIFI_H
+#ifndef __WIFI_H
+#define __WIFI_H
 #include "defines.h"
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1

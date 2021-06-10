@@ -1,5 +1,5 @@
-#ifndef DEFINES_H
-#define DEFINES_H
+#ifndef __DEFINES_H
+#define __DEFINES_H
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
@@ -13,6 +13,9 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "lwip/api.h"
+#include "lwip/netdb.h"
+#include "lwip/netbuf.h"
 #include "lwip/err.h"
 #include "lwip/sys.h"
 #include "lwip/sockets.h"
