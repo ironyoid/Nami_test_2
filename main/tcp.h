@@ -19,4 +19,5 @@ typedef enum {
 
 TaskHandle_t tcp_server_handle;
 void tcp_server_task(void *ptr);
+int8_t check_mac_list(uint8_t *buf);
 #endif
