@@ -66,6 +66,11 @@ int8_t check_mac_list(uint8_t *buf)
     uint8_t mac_flag = 0;
     for(uint8_t i = 0; i < list_of_mac.length; i++)
     {
+        if(!memcmp(&list_of_mac.mac[0][i], buf, 6))
+        {
+            return i;
+        }
+        /*
         for(uint8_t j = 0; j < 6; j++)
         {
             if(buf[j] == list_of_mac.mac[j][i]) mac_flag++;
@@ -75,6 +80,7 @@ int8_t check_mac_list(uint8_t *buf)
             return i;
         }
         mac_flag = 0;
+        */
     }
     return -1;
 }
@@ -88,10 +94,13 @@ uint8_t add_mac_to_list(uint8_t *buf)
 {
     if(list_of_mac.length < MAC_LIST_LEN)
     {
+        memcpy(&list_of_mac.mac[0][list_of_mac.length], buf, 6);
+        /*
         for(uint8_t i = 0; i < 6; i++)
         {
             list_of_mac.mac[i][list_of_mac.length] = buf[i];
         }  
+        */
         list_of_mac.length++;
         return 0;
     }
@@ -119,10 +128,13 @@ uint8_t delete_mac_from_list(int8_t num)
         {
             for (uint8_t i = num; i < (list_of_mac.length - 1); i++)
             {
+                memcpy(&list_of_mac.mac[0][i], &list_of_mac.mac[0][i + 1], 6);
+                /*
                 for (uint8_t j = 0; j < 6; j++)
                 {
                     list_of_mac.mac[j][i] = list_of_mac.mac[j][i + 1];
                 }
+                */
             }
             list_of_mac.length--;
             return 0;
