@@ -23,6 +23,6 @@ void app_main() {
     nvs_init();
     sta_ap_init();
     csi_init();
-    xTaskCreate(&udp_task, "udp_task", 2048, NULL, 0, &xTask_udp_handle);
-    xTaskCreate(&tcp_server_task, "tcp_server", 2048, NULL, 10, &tcp_server_handle);
+    //xTaskCreate(&udp_task, "udp_task", 2048, NULL, 0, &xTask_udp_handle);
+    xTaskCreate(&tcp_server_task, "tcp_server", 4096, NULL, 10, &tcp_server_handle);
 }

@@ -16,6 +16,7 @@ typedef enum {
     uint16_t length;
     uint16_t CRC;
 };
+
 TaskHandle_t tcp_server_handle;
 void tcp_server_task(void *ptr);
 #endif

@@ -54,25 +54,145 @@ void err_response(err_response_t response, int s, int flags)
         break;
     }
 }
-
-void controller_read(int sock, int flags, uint8_t *buf, uint16_t count, uint16_t size)
+int8_t check_mac_list(uint8_t *buf)
 {
-    uint8_t EE_error_flag = 1;
-    if (size >= 6)
+    uint8_t mac_flag = 0;
+    for(uint8_t i = 0; i < list_of_mac.length; i++)
     {
-        sprintf((char *)udp_ip, "%d.%d.%d.%d", buf[count], buf[count + 1], buf[count + 2], buf[count + 3]);
-        count += 4;
-        ESP_LOGW(TAG, "UDP_IP %s\n", udp_ip);
-        udp_port = ((uint16_t)buf[count] << 8) & 0xFF00;
-        udp_port |= ((uint16_t)buf[count + 1]) & 0x00FF;
-        count += 2;
-        ESP_LOGW(TAG, "UDP_PORT %d\n", udp_port);
-        
+        for(uint8_t j = 0; j < 6; j++)
+        {
+            if(buf[j] == list_of_mac.mac[j][i]) mac_flag++;
+        } 
+        if(mac_flag == 6)
+        {
+            return i;
+        }
+        mac_flag = 0;
+    }
+    return -1;
+}
+
+uint8_t add_mac_to_list(uint8_t *buf)
+{
+    if(list_of_mac.length < MAC_LIST_LEN)
+    {
+        for(uint8_t i = 0; i < 6; i++)
+        {
+            list_of_mac.mac[i][list_of_mac.length] = buf[i];
+        }  
+        list_of_mac.length++;
+        return 0;
     }
     else
     {
-        EE_error_flag = 0;
+        return 1;
     }
+}
+uint8_t delete_mac_from_list(int8_t num)
+{
+    if (list_of_mac.length != 0)
+    {
+        if (num == (list_of_mac.length - 1))
+        {
+            list_of_mac.length--;
+            return 0;
+        }
+        else
+        {
+            for (uint8_t i = num; i < (list_of_mac.length - 1); i++)
+            {
+                for (uint8_t j = 0; j < 6; j++)
+                {
+                    list_of_mac.mac[j][i] = list_of_mac.mac[j][i + 1];
+                }
+            }
+            list_of_mac.length--;
+            return 0;
+        }
+    }
+    else
+    {
+       return 1; 
+    }
+}
+void controller_read(int sock, int flags, uint8_t *buf, uint16_t count, uint16_t size)
+{
+    uint8_t EE_error_flag = 1;
+    while (count < size)
+    {
+        if (buf[count] == 'C')
+        {
+            count += 3;
+            sprintf((char *)udp_ip, "%d.%d.%d.%d", buf[count], buf[count + 1], buf[count + 2], buf[count + 3]);
+            count += 4;
+            udp_port = ((uint16_t)buf[count] << 8) & 0xFF00;
+            udp_port |= ((uint16_t)buf[count + 1]) & 0x00FF;
+            count += 2;
+#ifdef DEBUG
+            ESP_LOGW(TAG, "UDP_IP %s UDP_PORT %d\n", udp_ip, udp_port);
+#endif
+        }
+        if (buf[count] == 'A')
+        {
+            count += 3;
+            if (check_mac_list(buf + count) == -1)
+            {
+#ifdef DEBUG
+                ESP_LOGW(TAG, "Check mac list success...\n");
+#endif 
+                if (add_mac_to_list(buf + count))
+                {
+                    EE_error_flag = 0;
+#ifdef DEBUG
+                    ESP_LOGW(TAG, "Add mac list fail...\n");
+#endif 
+                }
+                else
+                {
+#ifdef DEBUG
+                    for (uint8_t i = 0; i < list_of_mac.length; i++)
+                    {
+                        ESP_LOGW(TAG, "%X:%X:%X:%X:%X:%X", list_of_mac.mac[0][i], list_of_mac.mac[1][i], list_of_mac.mac[2][i], list_of_mac.mac[3][i], list_of_mac.mac[4][i], list_of_mac.mac[5][i]);
+                    }
+#endif 
+                }
+            }
+            else
+            {
+                ESP_LOGW(TAG, "Check mac list fail...\n");
+                EE_error_flag = 0;
+            }
+            count += 6;
+        }
+        if(buf[count] == 'D')
+        {
+            count += 3;
+            int8_t num = check_mac_list(buf + count);
+            ESP_LOGW(TAG, "num = %d", num);
+            ESP_LOGW(TAG, "len = %d", list_of_mac.length);
+            if (num != -1)
+            {
+                if (!delete_mac_from_list(num))
+                {
+                    for (uint8_t i = 0; i < list_of_mac.length; i++)
+                    {
+                        ESP_LOGW(TAG, "%X:%X:%X:%X:%X:%X", list_of_mac.mac[0][i], list_of_mac.mac[1][i], list_of_mac.mac[2][i], list_of_mac.mac[3][i], list_of_mac.mac[4][i], list_of_mac.mac[5][i]);
+                    }
+                }
+                else
+                {
+                    ESP_LOGW(TAG, "Couldn't delete this MAC...\n");
+                }
+            }
+            else
+            {
+                ESP_LOGW(TAG, "This MAC doesn't exist...\n");
+                EE_error_flag = 0;
+            }
+        }
+        count++;
+    }
+
     if (EE_error_flag == 1)
     {
         err_response(OKEY, sock, flags);
@@ -182,6 +302,7 @@ void tcp_server_task(void *pvParameters)
                     instruction.CRC |= ((uint16_t)rx_buffer[count + instruction.length + 1]) & 0x00FF;
                     CRC = CRC16(rx_buffer, len - 2);
                     ESP_LOGI(TAG, "CRC16 %d", CRC);
+                    //CRC = 0x0000;
                     if (instruction.CRC == CRC)
                     {
                         controller_read(sock, 0, rx_buffer, count, instruction.length);

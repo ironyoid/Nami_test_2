@@ -27,4 +27,5 @@
 #define ESP_WIFI_PASS               "2kcdbL5b"
 #define EXAMPLE_MAX_STA_CONN        16
 #define CSI_QUEUE_LEN               10
+#define MAC_LIST_LEN                16
 #endif
