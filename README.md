@@ -72,4 +72,5 @@ Just downolad project and build with
 ```c
 idf.py build
 ```
-
+## Note
+It's only up to 16 transmitters posible in this version
