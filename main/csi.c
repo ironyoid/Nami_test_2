@@ -1,11 +1,13 @@
 #include "csi.h"
+//#define DEBUG
 static const char *TAG = "NAMI_TEST_CSI";
 
 void _wifi_csi_cb(void *ctx, wifi_csi_info_t *data)
 {
     wifi_csi_info_t d = data[0];
-    char mac[20] = {0};
+
 #ifdef DEBUG
+    char mac[20] = {0};
     sprintf(mac, "%02X:%02X:%02X:%02X:%02X:%02X", d.mac[0], d.mac[1], d.mac[2], d.mac[3], d.mac[4], d.mac[5]);
     ESP_LOGI(TAG, "CSI_DATA");
     ESP_LOGI(TAG, "%s,", mac);
@@ -30,23 +32,26 @@ void _wifi_csi_cb(void *ctx, wifi_csi_info_t *data)
     ESP_LOGI(TAG, "%d,", d.rx_ctrl.rx_state);
     printf("\n");
 #endif
-    portBASE_TYPE xStatus = xQueueSend(csi_queue, data, portMAX_DELAY);
+    portBASE_TYPE xStatus = xQueueSend(csi_queue, data, 0);
     if (xStatus == pdPASS)
     {
+#ifdef DEBUG
         ESP_LOGI(TAG, "Success...");
+#endif
     }
     else
     {
+#ifdef DEBUG
         ESP_LOGI(TAG, "Could not add data to the queue...");
+#endif
     }
-    //vTaskDelay(0);
+    vTaskDelay(0);
 }
 
 void csi_init() {
 
     ESP_ERROR_CHECK(esp_wifi_set_csi(1));
 
-    // @See: https://github.com/espressif/esp-idf/blob/master/components/esp_wifi/include/esp_wifi_types.h#L401
     wifi_csi_config_t configuration_csi;
     configuration_csi.lltf_en = 1;
     configuration_csi.htltf_en = 1;

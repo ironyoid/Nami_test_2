@@ -22,6 +22,7 @@ void app_main() {
     nvs_init();
     sta_ap_init();
     csi_init();
-    xTaskCreate(&udp_task, "udp_task", 2048, NULL, 32, &xTask_udp_handle);
-    xTaskCreate(&udp_task_2, "udp_task_2", 2048, NULL, 10, &xTask_udp_2_handle);
+    
+    xTaskCreate(&udp_task, "udp_task", 2048, NULL, 0, &xTask_udp_handle);
+    //xTaskCreate(&udp_task_2, "udp_task_2", 2048, NULL, 10, &xTask_udp_2_handle);
 }
