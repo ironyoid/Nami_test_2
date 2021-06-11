@@ -6,6 +6,7 @@ There are three main functions:
 - tcp_task - Task which creates a TCP socket and waiting for commands from controller 
 - _wifi_csi_cb - callback function which called each time when new CSI data appears and send it to queue
 
+
 ## Protocol
 UDP: just a row data (wifi_pkt_rx_ctrl_t + mac adress)
 From esp_wifi_types.h
@@ -63,9 +64,10 @@ Responses:
 - OKEY: "\x02\x54\x41\x00\x00\x00\x01\x4C"
 - ERR:  "\x02\x54\x41\xFF\x00\x00\xCE\x2F"
 - CRC error: "\x02\x54\x41\xFE\x00\x00\xF9\x1F"
-- TIMEOUT: "\x02\x54\x41\xFD\x00\x00\xA0\x4F"
-- NOACCESS: "\x02\x54\x41\xFC\x00\x00\x97\x7F"
+- ELEMENT_EXIST: "\x02\x54\x41\xFD\x00\x00\xA0\x4F"
+- ELEMENT_DOSNT_EXIST: "\x02\x54\x41\xFC\x00\x00\x97\xF7"
 - UNKNOW: "\x02\x54\x41\xFF\x00\x00\xCE\x2F"
+- OUT_OF_RANGE: "\x02\x54\x41\xF9\x00\x00\x7C\x8F"
 
 ## How to build
 Just downolad project and build with
@@ -75,3 +77,4 @@ idf.py build
 ## Note
 - It's only up to 16 transmitters posible in this version
 - CRC16 is CRC-16/CCITT-FALSE with 0x1021 poly
+- There is hint in tcp.c to avoid CRC calculation (for tests)
