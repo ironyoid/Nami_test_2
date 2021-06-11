@@ -44,14 +44,17 @@ void err_response(err_response_t response, int s, int flags)
     case ECRC:
         tcp_write(s, "\x02\x54\x41\xFE\x00\x00\xF9\x1F", 8, flags);     /* CRC error */
         break;
-    case TIMEOUT:
-        tcp_write(s, "\x02\x54\x41\xFD\x00\x00\xA0\x4F", 8, flags);
+    case ELEMENT_EXIST:
+        tcp_write(s, "\x02\x54\x41\xFD\x00\x00\xA0\x4F", 8, flags);     /*We can't add this element because it is already exists */
         break;
-    case NOACCESS:
-        tcp_write(s, "\x02\x54\x41\xFC\x00\x00\x97\x7F", 8, flags);
+    case ELEMENT_DOSNT_EXIST:
+        tcp_write(s, "\x02\x54\x41\xFC\x00\x00\x97\xF7", 8, flags);     /*We can't delete this element because it doesn't exist */
         break;
     case UNKNOW:
-        tcp_write(s, "\x02\x54\x41\xFF\x00\x00\xCE\x2F", 8, flags);
+        tcp_write(s, "\x02\x54\x41\xFA\x00\x00\x25\xDF", 8, flags);
+        break;
+    case OUT_OF_RANGE:
+        tcp_write(s, "\x02\x54\x41\xF9\x00\x00\x7C\x8F", 8, flags);     /*List of MACs is already full */
         break;
     }
 }
@@ -63,25 +66,18 @@ void err_response(err_response_t response, int s, int flags)
  */
 int8_t check_mac_list(uint8_t *buf)
 {
-    uint8_t mac_flag = 0;
-    for(uint8_t i = 0; i < list_of_mac.length; i++)
+    xSemaphoreTake(x_mac_List_semaphore, portMAX_DELAY);
     {
-        if(!memcmp(&list_of_mac.mac[0][i], buf, 6))
+        for (uint8_t i = 0; i < list_of_mac.length; i++)
         {
-            return i;
+            if (!memcmp(&list_of_mac.mac[i][0], buf, 6))
+            {
+                xSemaphoreGive(x_mac_List_semaphore);
+                return i;
+            }
         }
-        /*
-        for(uint8_t j = 0; j < 6; j++)
-        {
-            if(buf[j] == list_of_mac.mac[j][i]) mac_flag++;
-        } 
-        if(mac_flag == 6)
-        {
-            return i;
-        }
-        mac_flag = 0;
-        */
     }
+    xSemaphoreGive(x_mac_List_semaphore);
     return -1;
 }
 /**
@@ -92,22 +88,22 @@ int8_t check_mac_list(uint8_t *buf)
  */
 uint8_t add_mac_to_list(uint8_t *buf)
 {
-    if(list_of_mac.length < MAC_LIST_LEN)
+    xSemaphoreTake(x_mac_List_semaphore, portMAX_DELAY);
     {
-        memcpy(&list_of_mac.mac[0][list_of_mac.length], buf, 6);
-        /*
-        for(uint8_t i = 0; i < 6; i++)
+        if (list_of_mac.length < MAC_LIST_LEN)
         {
-            list_of_mac.mac[i][list_of_mac.length] = buf[i];
-        }  
-        */
-        list_of_mac.length++;
-        return 0;
+            memcpy(&list_of_mac.mac[list_of_mac.length][0], buf, 6);
+            list_of_mac.length++;
+            xSemaphoreGive(x_mac_List_semaphore);
+            return 0;
+        }
+        else
+        {
+            xSemaphoreGive(x_mac_List_semaphore);
+            return 1;
+        }
     }
-    else
-    {
-        return 1;
-    }
+    
 }
 /**
  * @brief   Check if MAC exist in the list
@@ -117,32 +113,32 @@ uint8_t add_mac_to_list(uint8_t *buf)
  */
 uint8_t delete_mac_from_list(int8_t num)
 {
-    if (list_of_mac.length != 0)
+    xSemaphoreTake(x_mac_List_semaphore, portMAX_DELAY);
     {
-        if (num == (list_of_mac.length - 1))
+        if (list_of_mac.length != 0)
         {
-            list_of_mac.length--;
-            return 0;
+            if (num == (list_of_mac.length - 1))
+            {
+                list_of_mac.length--;
+                xSemaphoreGive(x_mac_List_semaphore);
+                return 0;
+            }
+            else
+            {
+                for (uint8_t i = num; i < (list_of_mac.length - 1); i++)
+                {
+                    memcpy(&list_of_mac.mac[i][0], &list_of_mac.mac[i + 1][0], 6);
+                }
+                list_of_mac.length--;
+                xSemaphoreGive(x_mac_List_semaphore);
+                return 0;
+            }
         }
         else
         {
-            for (uint8_t i = num; i < (list_of_mac.length - 1); i++)
-            {
-                memcpy(&list_of_mac.mac[0][i], &list_of_mac.mac[0][i + 1], 6);
-                /*
-                for (uint8_t j = 0; j < 6; j++)
-                {
-                    list_of_mac.mac[j][i] = list_of_mac.mac[j][i + 1];
-                }
-                */
-            }
-            list_of_mac.length--;
-            return 0;
+            xSemaphoreGive(x_mac_List_semaphore);
+            return 1;
         }
-    }
-    else
-    {
-       return 1; 
     }
 }
 /**
@@ -157,7 +153,7 @@ uint8_t delete_mac_from_list(int8_t num)
  */
 void controller_read(int sock, int flags, uint8_t *buf, uint16_t count, uint16_t size)
 {
-    uint8_t EE_error_flag = 1;
+    err_response_t EE_error_flag = OKEY;
     while (count < size)
     {
         if (buf[count] == 'C')
@@ -172,7 +168,7 @@ void controller_read(int sock, int flags, uint8_t *buf, uint16_t count, uint16_t
             ESP_LOGW(TAG, "UDP_IP %s UDP_PORT %d\n", udp_ip, udp_port);
 #endif
         }
-        if (buf[count] == 'A')
+        else if (buf[count] == 'A')
         {
             count += 3;
             if (check_mac_list(buf + count) == -1)
@@ -182,7 +178,7 @@ void controller_read(int sock, int flags, uint8_t *buf, uint16_t count, uint16_t
 #endif 
                 if (add_mac_to_list(buf + count))
                 {
-                    EE_error_flag = 0;
+                    EE_error_flag = OUT_OF_RANGE;
 #ifdef DEBUG
                     ESP_LOGW(TAG, "Add mac list fail...\n");
 #endif 
@@ -192,19 +188,19 @@ void controller_read(int sock, int flags, uint8_t *buf, uint16_t count, uint16_t
 #ifdef DEBUG
                     for (uint8_t i = 0; i < list_of_mac.length; i++)
                     {
-                        ESP_LOGW(TAG, "%X:%X:%X:%X:%X:%X", list_of_mac.mac[0][i], list_of_mac.mac[1][i], list_of_mac.mac[2][i], list_of_mac.mac[3][i], list_of_mac.mac[4][i], list_of_mac.mac[5][i]);
+                        ESP_LOGW(TAG, "%X:%X:%X:%X:%X:%X", list_of_mac.mac[i][0], list_of_mac.mac[i][1], list_of_mac.mac[i][2], list_of_mac.mac[i][3], list_of_mac.mac[i][4], list_of_mac.mac[i][5]);
                     }
 #endif 
                 }
             }
             else
             {
+                EE_error_flag = ELEMENT_EXIST;
                 ESP_LOGW(TAG, "Check mac list fail...\n");
-                EE_error_flag = 0;
             }
             count += 6;
         }
-        if(buf[count] == 'D')
+        else if(buf[count] == 'D')
         {
             count += 3;
             int8_t num = check_mac_list(buf + count);
@@ -214,33 +210,39 @@ void controller_read(int sock, int flags, uint8_t *buf, uint16_t count, uint16_t
             {
                 if (!delete_mac_from_list(num))
                 {
+#ifdef DEBUG
                     for (uint8_t i = 0; i < list_of_mac.length; i++)
                     {
-                        ESP_LOGW(TAG, "%X:%X:%X:%X:%X:%X", list_of_mac.mac[0][i], list_of_mac.mac[1][i], list_of_mac.mac[2][i], list_of_mac.mac[3][i], list_of_mac.mac[4][i], list_of_mac.mac[5][i]);
+                        ESP_LOGW(TAG, "%X:%X:%X:%X:%X:%X", list_of_mac.mac[i][0], list_of_mac.mac[i][1], list_of_mac.mac[i][2], list_of_mac.mac[i][3], list_of_mac.mac[i][4], list_of_mac.mac[i][5]);
                     }
+#endif    
                 }
                 else
                 {
+                    EE_error_flag = OUT_OF_RANGE;
+#ifdef DEBUG
                     ESP_LOGW(TAG, "Couldn't delete this MAC...\n");
+#endif  
                 }
             }
             else
             {
+                EE_error_flag = ELEMENT_DOSNT_EXIST;
+#ifdef DEBUG
                 ESP_LOGW(TAG, "This MAC doesn't exist...\n");
-                EE_error_flag = 0;
+#endif  
             }
+            count += 6;
         }
-        count++;
+        else
+        {
+            count++;
+        }   
     }
-
-    if (EE_error_flag == 1)
-    {
-        err_response(OKEY, sock, flags);
-    }
-    else
-    {
-        err_response(ERR, sock, flags);
-    }
+#ifdef DEBUG
+    ESP_LOGW(TAG, "EE_error_flag %d \n", EE_error_flag);
+#endif  
+    err_response(EE_error_flag, sock, flags);
 }
 /**
  * @brief   TCP task 
@@ -347,7 +349,7 @@ void tcp_task(void *pvParameters)
                     instruction.CRC |= ((uint16_t)rx_buffer[count + instruction.length + 1]) & 0x00FF;
                     CRC = CRC16(rx_buffer, len - 2);
                     ESP_LOGI(TAG, "CRC16 %d", CRC);
-                    CRC = 0x0000;                     /* Hint to avoid stupid CRC calculation */
+                    //CRC = 0x0000;                     /* Hint to avoid stupid CRC calculation */
                     if (instruction.CRC == CRC)
                     {
                         controller_read(sock, 0, rx_buffer, count, instruction.length);

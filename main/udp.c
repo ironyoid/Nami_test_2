@@ -2,7 +2,7 @@
 #include "tcp.h"
 #include "csi.h"
 static const char *TAG = "NAMI_TEST_UDP";
-#define DEBUG
+//#define DEBUG
 /**
  * @brief   UDP task 
  * @param   pvParameters
@@ -25,8 +25,8 @@ void udp_task(void *arg)
         xStatus = xQueueReceive(csi_queue, &data, portMAX_DELAY);
         if (xStatus == pdPASS)
         {
-            char mac[20] = {0};
 #ifdef DEBUG
+            char mac[20] = {0};
             ESP_LOGE(TAG, "Success...");
             sprintf(mac, "%02X:%02X:%02X:%02X:%02X:%02X", data.mac[0], data.mac[1], data.mac[2], data.mac[3], data.mac[4], data.mac[5]);
             ESP_LOGE(TAG, "CSI_DATA");
@@ -51,49 +51,49 @@ void udp_task(void *arg)
             ESP_LOGE(TAG, "%d,", data.rx_ctrl.sig_len);
             ESP_LOGE(TAG, "%d,", data.rx_ctrl.rx_state);
 #endif
-            if ((udp_ip[0] != '\0') && (udp_port != 0))
-            {
-                dest_addr.sin_addr.s_addr = inet_addr(udp_ip);
-                dest_addr.sin_port = htons(udp_port);
-                if (check_mac_list(data.mac) != -1)
+                if ((udp_ip[0] != '\0') && (udp_port != 0))
                 {
-                    int sock = socket(addr_family, SOCK_DGRAM, ip_protocol);
-                    if (sock < 0)
+                    dest_addr.sin_addr.s_addr = inet_addr(udp_ip);
+                    dest_addr.sin_port = htons(udp_port);
+                    if (check_mac_list(data.mac) != -1)
                     {
-#ifdef DEBUG
-                        ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
-#endif
-                    }
-                    else
-                    {
-#ifdef DEBUG
-                        ESP_LOGI(TAG, "Socket created, sending to %s:%d", udp_ip, udp_port);
-#endif
-                        /* Started from data.rx_ctrl and go to mac */
-                        int err = sendto(sock, &data.rx_ctrl, sizeof(data.rx_ctrl) + sizeof(data.mac), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)); 
-                        if (err < 0)
+                        int sock = socket(addr_family, SOCK_DGRAM, ip_protocol);
+                        if (sock < 0)
                         {
 #ifdef DEBUG
-                            ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                            ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
 #endif
                         }
                         else
                         {
 #ifdef DEBUG
-                            ESP_LOGI(TAG, "Message sent");
+                            ESP_LOGI(TAG, "Socket created, sending to %s:%d", udp_ip, udp_port);
 #endif
-                            if (sock != -1)
+                            /* Started from data.rx_ctrl and go to mac */
+                            int err = sendto(sock, &data.rx_ctrl, sizeof(data.rx_ctrl) + sizeof(data.mac), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                            if (err < 0)
                             {
 #ifdef DEBUG
-                                ESP_LOGE(TAG, "Shutting down socket and restarting...");
+                                ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
 #endif
-                                shutdown(sock, 0);
-                                close(sock);
+                            }
+                            else
+                            {
+#ifdef DEBUG
+                                ESP_LOGI(TAG, "Message sent");
+#endif
+                                if (sock != -1)
+                                {
+#ifdef DEBUG
+                                    ESP_LOGE(TAG, "Shutting down socket and restarting...");
+#endif
+                                    shutdown(sock, 0);
+                                    close(sock);
+                                }
                             }
                         }
                     }
                 }
-            }
         }
         else
         {
@@ -104,6 +104,6 @@ void udp_task(void *arg)
 #ifdef DEBUG
         printf("\n");
 #endif
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        // vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }

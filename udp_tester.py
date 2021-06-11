@@ -3,7 +3,7 @@ from socketserver import *
 
 #данные сервера
 host = '192.168.88.232'
-port = 6350
+port = 6352
 addr = (host,port)
 
 #обработчик запросов UDP подкласс DatagramRequestHandler
